@@ -17,14 +17,15 @@ import javax.inject.Inject
 class MainViewModel(private val repo: PersonRepo) : ViewModel() {
 
     private val _personsStateFlow: MutableStateFlow<ApiState> =
-        MutableStateFlow(ApiState.Empty)
+        MutableStateFlow(ApiState.Loading)
 
     val personsStateFlow: StateFlow<ApiState> = _personsStateFlow
 
+
+
+
     fun getPersons() = viewModelScope.launch {
 
-        _personsStateFlow.value = ApiState.Loading
-        delay(3000L)
         repo.getPage().catch { e ->
             _personsStateFlow.value = ApiState.Failure(e)
         }.collect { data ->

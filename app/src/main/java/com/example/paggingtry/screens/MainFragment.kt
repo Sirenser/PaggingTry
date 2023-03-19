@@ -9,16 +9,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.paging.CombinedLoadStates
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.paggingtry.MainApp
-import com.example.paggingtry.R
-import com.example.paggingtry.adapters.PersonAdapter
 import com.example.paggingtry.adapters.PersonPagingAdapter
+import com.example.paggingtry.adapters.PersonsLoaderStateAdapter
 import com.example.paggingtry.databinding.FragmentMainBinding
 import com.example.paggingtry.util.ApiState
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class MainFragment : Fragment() {
@@ -51,21 +49,40 @@ class MainFragment : Fragment() {
 
         binding.recyclerView.layoutManager = LinearLayoutManager(context)
 
-        binding.recyclerView.adapter = pagingAdapter
+        binding.recyclerView.adapter =
+            pagingAdapter.withLoadStateHeaderAndFooter(
+                header = PersonsLoaderStateAdapter(),
+                footer = PersonsLoaderStateAdapter()
+            )
+
+        pagingAdapter.addLoadStateListener { state: CombinedLoadStates ->
+
+            binding.recyclerView.isVisible = state.refresh != LoadState.Loading
+            binding.pbLoading.isVisible = state.refresh == LoadState.Loading
+            binding.tvLoading.isVisible = state.refresh == LoadState.Loading
+
+            if(state.refresh is LoadState.Error){
+                binding.recyclerView.isVisible = state.refresh == LoadState.Loading
+                binding.pbLoading.isVisible = state.refresh == LoadState.Loading
+                binding.tvLoading.isVisible = state.refresh == LoadState.Loading
+                binding.tvError.isVisible = state.refresh != LoadState.Loading
+                binding.button.isVisible = state.refresh != LoadState.Loading
+
+            }
+
+
+        }
 
         viewModel.getPersons()
 
+
+
         lifecycleScope.launchWhenCreated {
+            //ТУТ ApiState.Failure не работает :(
             viewModel.personsStateFlow.collect {
                 when (it) {
                     is ApiState.Loading -> {
-                        binding.recyclerView.isVisible = false
 
-                        binding.tvError.isVisible = false
-                        binding.button.isVisible = false
-
-                        binding.tvLoading.isVisible = true
-                        binding.pbLoading.isVisible = true
                     }
                     is ApiState.Failure -> {
                         binding.recyclerView.isVisible = false
@@ -98,6 +115,7 @@ class MainFragment : Fragment() {
         }
 
         binding.button.setOnClickListener {
+            //Почему то и функция еще раз не отрабатывает :(
             viewModel.getPersons()
         }
 
